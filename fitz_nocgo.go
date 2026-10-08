@@ -466,6 +466,57 @@ func (f *Document) HTML(pageNumber int, header bool) (string, error) {
 	return bytePtrToString(ret), nil
 }
 
+// HTMLText returns html for given page number without the page's images: the text lines of HTML(pageNumber, false) only.
+func (f *Document) HTMLText(pageNumber int) (string, error) {
+	f.mtx.Lock()
+	defer f.mtx.Unlock()
+
+	if pageNumber >= f.NumPage() {
+		return "", ErrPageMissing
+	}
+
+	page := fzLoadPage(f.ctx, f.doc, pageNumber)
+	if page == nil {
+		return "", ErrLoadPage
+	}
+
+	defer fzDropPage(f.ctx, page)
+
+	var bounds fzRect
+	bounds = boundPage(f.ctx, page)
+
+	var ctm fzMatrix
+	ctm = scale(float32(72.0/72), float32(72.0/72))
+
+	text := newStextPage(f.ctx, bounds)
+	defer fzDropStextPage(f.ctx, text)
+
+	var opts fzStextOptions
+	opts.Flags = 0
+
+	device := fzNewStextDevice(f.ctx, text, &opts)
+	fzEnableDeviceHints(f.ctx, device, fzNoCache)
+	defer fzDropDevice(f.ctx, device)
+
+	runPageContents(f.ctx, page, device, ctm)
+
+	fzCloseDevice(f.ctx, device)
+
+	buf := fzNewBuffer(f.ctx, 1024)
+	defer fzDropBuffer(f.ctx, buf)
+
+	out := fzNewOutputWithBuffer(f.ctx, buf)
+	defer fzDropOutput(f.ctx, out)
+
+	fzPrintStextPageAsHTML(f.ctx, out, text, pageNumber)
+
+	fzCloseOutput(f.ctx, out)
+
+	ret := fzStringFromBuffer(f.ctx, buf)
+
+	return bytePtrToString(ret), nil
+}
+
 // SVG returns svg document for given page number.
 func (f *Document) SVG(pageNumber int) (string, error) {
 	f.mtx.Lock()
