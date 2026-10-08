@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"testing"
 )
 
@@ -167,6 +169,39 @@ func TestHTML(t *testing.T) {
 		}
 
 		f.Close()
+	}
+}
+
+func TestHTMLText(t *testing.T) {
+	doc, err := New(filepath.Join("testdata", "test.pdf"))
+	if err != nil {
+		t.Error(err)
+	}
+
+	defer doc.Close()
+
+	linePattern := regexp.MustCompile(`(?s)<p[^>]*>.*?</p>`)
+
+	for n := 0; n < doc.NumPage(); n++ {
+		html, err := doc.HTML(n, false)
+		if err != nil {
+			t.Error(err)
+		}
+
+		text, err := doc.HTMLText(n)
+		if err != nil {
+			t.Error(err)
+		}
+
+		if strings.Contains(text, "<img") {
+			t.Errorf("page %d: expected no <img, got %q", n, text)
+		}
+
+		htmlLines := strings.Join(linePattern.FindAllString(html, -1), "\n")
+		textLines := strings.Join(linePattern.FindAllString(text, -1), "\n")
+		if textLines != htmlLines {
+			t.Errorf("page %d: expected the text lines of HTML, got %q, want %q", n, textLines, htmlLines)
+		}
 	}
 }
 
