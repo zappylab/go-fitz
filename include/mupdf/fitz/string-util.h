@@ -1,4 +1,4 @@
-// Copyright (C) 2004-2022 Artifex Software, Inc.
+// Copyright (C) 2004-2025 Artifex Software, Inc.
 //
 // This file is part of MuPDF.
 //
@@ -17,8 +17,8 @@
 //
 // Alternative licensing terms are available from the licensor.
 // For commercial licensing, see <https://www.artifex.com/> or contact
-// Artifex Software, Inc., 1305 Grant Avenue - Suite 200, Novato,
-// CA 94945, U.S.A., +1(415)492-9861, for further information.
+// Artifex Software, Inc., 39 Mesa Street, Suite 108A, San Francisco,
+// CA 94129, USA, for further information.
 
 #ifndef MUPDF_FITZ_STRING_H
 #define MUPDF_FITZ_STRING_H
@@ -89,6 +89,28 @@ size_t fz_strlcpy(char *dst, const char *src, size_t n);
 size_t fz_strlcat(char *dst, const char *src, size_t n);
 
 /**
+	Safe strstr function.
+
+	haystack: Where to look (may be NULL).
+
+	needled: What to look for.
+
+	Returns NULL if unmatched, or pointer to start of match.
+*/
+const char *fz_strstr(const char *haystack, const char *needle);
+
+/**
+	Safe case-insensitive strstr function. (Accepts UTF-8).
+
+	haystack: Where to look (may be NULL).
+
+	needled: What to look for.
+
+	Returns NULL if unmatched, or pointer to start of match.
+*/
+const char *fz_strstrcase(const char *haystack, const char *needle);
+
+/**
 	Find the start of the first occurrence of the substring needle in haystack.
 */
 void *fz_memmem(const void *haystack, size_t haystacklen, const void *needle, size_t needlelen);
@@ -104,9 +126,44 @@ void fz_dirname(char *dir, const char *path, size_t dirsize);
 const char *fz_basename(const char *path);
 
 /**
-	decode url escapes.
+	portable strverscmp(3) function
+*/
+int fz_strverscmp(const char *s1, const char *s2);
+
+/**
+	Like fz_decode_uri_component but in-place.
 */
 char *fz_urldecode(char *url);
+
+/**
+ * Return a new string representing the unencoded version of the given URI.
+ * This decodes all escape sequences except those that would result in a reserved
+ * character that are part of the URI syntax (; / ? : @ & = + $ , #).
+ */
+char *fz_decode_uri(fz_context *ctx, const char *s);
+
+/**
+ * Return a new string representing the unencoded version of the given URI component.
+ * This decodes all escape sequences!
+ */
+char *fz_decode_uri_component(fz_context *ctx, const char *s);
+
+/**
+ * Return a new string representing the provided string encoded as a URI.
+ */
+char *fz_encode_uri(fz_context *ctx, const char *s);
+
+/**
+ * Return a new string representing the provided string encoded as an URI component.
+ * This also encodes the special reserved characters (; / ? : @ & = + $ , #).
+ */
+char *fz_encode_uri_component(fz_context *ctx, const char *s);
+
+/**
+ * Return a new string representing the provided string encoded as an URI path name.
+ * This also encodes the special reserved characters except /.
+ */
+char *fz_encode_uri_pathname(fz_context *ctx, const char *s);
 
 /**
 	create output file name using a template.
@@ -128,15 +185,29 @@ void fz_format_output_path(fz_context *ctx, char *path, size_t size, const char 
 char *fz_cleanname(char *name);
 
 /**
+	rewrite path to the shortest string that names the same path.
+
+	Eliminates multiple and trailing slashes, interprets "." and
+	"..". Allocates a new string that the caller must free.
+*/
+char *fz_cleanname_strdup(fz_context *ctx, const char *name);
+
+/**
 	Resolve a path to an absolute file name.
 	The resolved path buffer must be of at least PATH_MAX size.
 */
 char *fz_realpath(const char *path, char *resolved_path);
 
 /**
-	Case insensitive (ASCII only) string comparison.
+	Case insensitive (UTF8) string comparison.
 */
 int fz_strcasecmp(const char *a, const char *b);
+
+/**
+	Case insensitive (UTF8) string comparison.
+
+	n = maximum number of bytes to read from either a or b.
+*/
 int fz_strncasecmp(const char *a, const char *b, size_t n);
 
 /**
@@ -149,12 +220,28 @@ enum { FZ_UTFMAX = 4 };
 	UTF8 decode a single rune from a sequence of chars.
 
 	rune: Pointer to an int to assign the decoded 'rune' to.
+	(0xFFFD on error).
 
 	str: Pointer to a UTF8 encoded string.
 
 	Returns the number of bytes consumed.
 */
 int fz_chartorune(int *rune, const char *str);
+
+/**
+	UTF8 decode a single rune from a sequence of chars
+	of given length.
+
+	rune: Pointer to an int to assign the decoded 'rune' to.
+	(0xFFFD on error).
+
+	str: Pointer to a UTF8 encoded string.
+
+	n: The number of bytes available at str.
+
+	Returns the number of bytes consumed.
+*/
+int fz_chartorunen(int *rune, const char *str, size_t n);
 
 /**
 	UTF8 encode a rune to a sequence of chars.
@@ -211,6 +298,17 @@ const char *fz_runeptr(const char *str, int idx);
 */
 int fz_utflen(const char *s);
 
+/*
+	Convert a wchar string into a new heap allocated utf8 one.
+*/
+char *fz_utf8_from_wchar(fz_context *ctx, const wchar_t *s);
+
+/*
+	Convert a utf8 string into a new heap allocated wchar one.
+*/
+wchar_t *fz_wchar_from_utf8(fz_context *ctx, const char *path);
+
+
 /**
 	Locale-independent decimal to binary conversion. On overflow
 	return (-)INFINITY and set errno to ERANGE. On underflow return
@@ -233,5 +331,164 @@ const char *fz_parse_page_range(fz_context *ctx, const char *s, int *a, int *b, 
 */
 int fz_tolower(int c);
 int fz_toupper(int c);
+
+/**
+	Bit unpacking.
+*/
+
+static inline uint16_t fz_unpack_uint16(const uint8_t *p)
+{
+	return (uint16_t)p[0] << 8 | (uint16_t)p[1];
+}
+
+static inline uint16_t fz_unpack_uint16_le(const uint8_t *p)
+{
+	return (uint16_t)p[1] << 8 | (uint16_t)p[0];
+}
+
+static inline uint32_t fz_unpack_uint32(const uint8_t *p)
+{
+	return (uint32_t)p[0] << 24 | (uint32_t)p[1] << 16 | (uint32_t)p[2] << 8 | (uint32_t)p[3];
+}
+
+static inline uint32_t fz_unpack_uint32_le(const uint8_t *p)
+{
+	return (uint32_t)p[3] << 24 | (uint32_t)p[2] << 16 | (uint32_t)p[1] << 8 | (uint32_t)p[0];
+}
+
+static inline uint64_t fz_unpack_uint64(const uint8_t *p)
+{
+	return  (
+		(uint64_t)p[0]<<56 | (uint64_t)p[1]<<48 | (uint64_t)p[2]<<40 | (uint64_t)p[3]<<32 |
+		(uint64_t)p[4]<<24 | (uint64_t)p[5]<<16 | (uint64_t)p[6]<<8 | (uint64_t)p[7]
+	);
+}
+
+static inline uint64_t fz_unpack_uint64_le(const uint8_t *p)
+{
+	return (
+		(uint64_t)p[7]<<56 | (uint64_t)p[6]<<48 | (uint64_t)p[5]<<40 | (uint64_t)p[4]<<32 |
+		(uint64_t)p[3]<<24 | (uint64_t)p[2]<<16 | (uint64_t)p[1]<<8 | (uint64_t)p[0]
+	);
+}
+
+static inline int16_t fz_unpack_int16(const uint8_t *p) { return fz_unpack_uint16(p); }
+static inline int16_t fz_unpack_int16_le(const uint8_t *p) { return fz_unpack_uint16_le(p); }
+static inline int32_t fz_unpack_int32(const uint8_t *p) { return fz_unpack_uint32(p); }
+static inline int32_t fz_unpack_int32_le(const uint8_t *p) { return fz_unpack_uint32_le(p); }
+static inline int64_t fz_unpack_int64(const uint8_t *p) { return fz_unpack_uint64(p); }
+static inline int64_t fz_unpack_int64_le(const uint8_t *p) { return fz_unpack_uint64_le(p); }
+
+static inline float fz_unpack_float(const uint8_t *p)
+{
+	uint32_t u = fz_unpack_uint32(p);
+	float x;
+	memcpy(&x, &u, sizeof x);
+	return x;
+}
+
+static inline float fz_unpack_float_le(const uint8_t *p)
+{
+	uint32_t u = fz_unpack_uint32_le(p);
+	float x;
+	memcpy(&x, &u, sizeof x);
+	return x;
+}
+
+static inline double fz_unpack_double(const uint8_t *p)
+{
+	uint64_t u = fz_unpack_uint64(p);
+	double x;
+	memcpy(&x, &u, sizeof x);
+	return x;
+}
+
+static inline double fz_unpack_double_le(const uint8_t *p)
+{
+	uint64_t u = fz_unpack_uint64_le(p);
+	double x;
+	memcpy(&x, &u, sizeof x);
+	return x;
+}
+
+static inline void fz_pack_uint16(uint8_t *p, uint16_t x)
+{
+	p[0] = x >> 8;
+	p[1] = x;
+}
+
+static inline void fz_pack_uint32(uint8_t *p, uint32_t x)
+{
+	p[0] = x >> 24;
+	p[1] = x >> 16;
+	p[2] = x >> 8;
+	p[3] = x;
+}
+
+static inline void fz_pack_uint64(uint8_t *p, uint64_t x)
+{
+	p[0] = x >> 56;
+	p[1] = x >> 48;
+	p[2] = x >> 40;
+	p[3] = x >> 32;
+	p[4] = x >> 24;
+	p[5] = x >> 16;
+	p[6] = x >> 8;
+	p[7] = x;
+}
+
+static inline void fz_pack_uint16_le(uint8_t *p, uint16_t x)
+{
+	p[0] = x;
+	p[1] = x >> 8;
+}
+
+static inline void fz_pack_uint32_le(uint8_t *p, uint32_t x)
+{
+	p[0] = x;
+	p[1] = x >> 8;
+	p[2] = x >> 16;
+	p[3] = x >> 24;
+}
+
+static inline void fz_pack_uint64_le(uint8_t *p, uint64_t x)
+{
+	p[0] = x;
+	p[1] = x >> 8;
+	p[2] = x >> 16;
+	p[3] = x >> 24;
+	p[4] = x >> 32;
+	p[5] = x >> 40;
+	p[6] = x >> 48;
+	p[7] = x >> 56;
+}
+
+static inline void fz_pack_float(uint8_t *p, float x)
+{
+	uint32_t u;
+	memcpy(&u, &x, sizeof u);
+	fz_pack_uint32(p, u);
+}
+
+static inline void fz_pack_double(uint8_t *p, double x)
+{
+	uint64_t u;
+	memcpy(&u, &x, sizeof u);
+	fz_pack_uint64(p, u);
+}
+
+static inline void fz_pack_float_le(uint8_t *p, float x)
+{
+	uint32_t u;
+	memcpy(&u, &x, sizeof u);
+	fz_pack_uint32_le(p, u);
+}
+
+static inline void fz_pack_double_le(uint8_t *p, double x)
+{
+	uint64_t u;
+	memcpy(&u, &x, sizeof u);
+	fz_pack_uint64_le(p, u);
+}
 
 #endif

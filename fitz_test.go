@@ -1,26 +1,34 @@
-package fitz
+package fitz_test
 
 import (
+	"errors"
 	"fmt"
+	"image"
 	"image/jpeg"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
+	"sync"
 	"testing"
+
+	"github.com/greenwookez/go-fitz"
 )
 
 func TestImage(t *testing.T) {
-	doc, err := New(filepath.Join("testdata", "test.pdf"))
+	doc, err := fitz.New(filepath.Join("testdata", "test.pdf"))
 	if err != nil {
 		t.Error(err)
 	}
 
 	defer doc.Close()
 
-	tmpDir, err := ioutil.TempDir(os.TempDir(), "fitz")
+	tmpDir, err := os.MkdirTemp(os.TempDir(), "fitz")
 	if err != nil {
 		t.Error(err)
 	}
+
+	defer os.RemoveAll(tmpDir)
 
 	for n := 0; n < doc.NumPage(); n++ {
 		img, err := doc.Image(n)
@@ -43,19 +51,19 @@ func TestImage(t *testing.T) {
 }
 
 func TestImageFromMemory(t *testing.T) {
-	b, err := ioutil.ReadFile(filepath.Join("testdata", "test.pdf"))
+	b, err := os.ReadFile(filepath.Join("testdata", "test.pdf"))
 	if err != nil {
 		t.Error(err)
 	}
 
-	doc, err := NewFromMemory(b)
+	doc, err := fitz.NewFromMemory(b)
 	if err != nil {
 		t.Error(err)
 	}
 
 	defer doc.Close()
 
-	tmpDir, err := ioutil.TempDir(os.TempDir(), "fitz")
+	tmpDir, err := os.MkdirTemp(os.TempDir(), "fitz")
 	if err != nil {
 		t.Error(err)
 	}
@@ -83,7 +91,7 @@ func TestImageFromMemory(t *testing.T) {
 }
 
 func TestLinks(t *testing.T) {
-	doc, err := New(filepath.Join("testdata", "test.pdf"))
+	doc, err := fitz.New(filepath.Join("testdata", "test.pdf"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -105,17 +113,19 @@ func TestLinks(t *testing.T) {
 }
 
 func TestText(t *testing.T) {
-	doc, err := New(filepath.Join("testdata", "test.pdf"))
+	doc, err := fitz.New(filepath.Join("testdata", "test.pdf"))
 	if err != nil {
 		t.Error(err)
 	}
 
 	defer doc.Close()
 
-	tmpDir, err := ioutil.TempDir(os.TempDir(), "fitz")
+	tmpDir, err := os.MkdirTemp(os.TempDir(), "fitz")
 	if err != nil {
 		t.Error(err)
 	}
+
+	defer os.RemoveAll(tmpDir)
 
 	for n := 0; n < doc.NumPage(); n++ {
 		text, err := doc.Text(n)
@@ -138,17 +148,19 @@ func TestText(t *testing.T) {
 }
 
 func TestHTML(t *testing.T) {
-	doc, err := New(filepath.Join("testdata", "test.pdf"))
+	doc, err := fitz.New(filepath.Join("testdata", "test.pdf"))
 	if err != nil {
 		t.Error(err)
 	}
 
 	defer doc.Close()
 
-	tmpDir, err := ioutil.TempDir(os.TempDir(), "fitz")
+	tmpDir, err := os.MkdirTemp(os.TempDir(), "fitz")
 	if err != nil {
 		t.Error(err)
 	}
+
+	defer os.RemoveAll(tmpDir)
 
 	for n := 0; n < doc.NumPage(); n++ {
 		html, err := doc.HTML(n, true)
@@ -170,18 +182,47 @@ func TestHTML(t *testing.T) {
 	}
 }
 
-func TestSVG(t *testing.T) {
-	doc, err := New(filepath.Join("testdata", "test.pdf"))
+func TestPNG(t *testing.T) {
+	doc, err := fitz.New(filepath.Join("testdata", "test.pdf"))
 	if err != nil {
 		t.Error(err)
 	}
 
 	defer doc.Close()
 
-	tmpDir, err := ioutil.TempDir(os.TempDir(), "fitz")
+	tmpDir, err := os.MkdirTemp(os.TempDir(), "fitz")
 	if err != nil {
 		t.Error(err)
 	}
+
+	defer os.RemoveAll(tmpDir)
+
+	for n := 0; n < doc.NumPage(); n++ {
+		png, err := doc.ImagePNG(n, 300.0)
+		if err != nil {
+			t.Error(err)
+		}
+
+		if err = os.WriteFile(filepath.Join(tmpDir, fmt.Sprintf("test%03d.png", n)), png, 0644); err != nil {
+			t.Error(err)
+		}
+	}
+}
+
+func TestSVG(t *testing.T) {
+	doc, err := fitz.New(filepath.Join("testdata", "test.pdf"))
+	if err != nil {
+		t.Error(err)
+	}
+
+	defer doc.Close()
+
+	tmpDir, err := os.MkdirTemp(os.TempDir(), "fitz")
+	if err != nil {
+		t.Error(err)
+	}
+
+	defer os.RemoveAll(tmpDir)
 
 	for n := 0; n < doc.NumPage(); n++ {
 		svg, err := doc.SVG(n)
@@ -204,7 +245,7 @@ func TestSVG(t *testing.T) {
 }
 
 func TestToC(t *testing.T) {
-	doc, err := New(filepath.Join("testdata", "test.pdf"))
+	doc, err := fitz.New(filepath.Join("testdata", "test.pdf"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -218,7 +259,7 @@ func TestToC(t *testing.T) {
 }
 
 func TestMetadata(t *testing.T) {
-	doc, err := New(filepath.Join("testdata", "test.pdf"))
+	doc, err := fitz.New(filepath.Join("testdata", "test.pdf"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -228,5 +269,140 @@ func TestMetadata(t *testing.T) {
 	meta := doc.Metadata()
 	if len(meta) == 0 {
 		t.Error(fmt.Errorf("metadata is empty"))
+	}
+}
+
+func TestBound(t *testing.T) {
+	doc, err := fitz.New(filepath.Join("testdata", "test.pdf"))
+	if err != nil {
+		t.Error(err)
+	}
+
+	defer doc.Close()
+	expected := image.Rect(0, 0, 612, 792)
+
+	for i := 0; i < doc.NumPage(); i++ {
+		bound, err := doc.Bound(i)
+		if err != nil {
+			t.Error(err)
+		}
+		if bound != expected {
+			t.Error(fmt.Errorf("bounds didn't match go %v when expedient %v", bound, expected))
+		}
+	}
+
+	_, err = doc.Bound(doc.NumPage())
+	if !errors.Is(err, fitz.ErrPageMissing) {
+		t.Error(fmt.Errorf("ErrPageMissing not returned got %v", err))
+	}
+}
+
+// test.pdf has no page with both text and an image, so the cover gives the image block and page 1 the text blocks.
+func TestExtractPageContent(t *testing.T) {
+	doc, err := fitz.New(filepath.Join("testdata", "test.pdf"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer doc.Close()
+
+	cover, err := doc.ExtractPageContent(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if cover.Width != 612 || cover.Height != 792 {
+		t.Errorf("page 0: expected a 612x792 page, got %vx%v", cover.Width, cover.Height)
+	}
+
+	if len(cover.Image) == 0 {
+		t.Error("page 0: expected an image block")
+	}
+
+	for _, img := range cover.Image {
+		if len(img.Hash) != 32 || img.X1 <= img.X0 || img.Y1 <= img.Y0 {
+			t.Errorf("page 0: expected an md5 hash and a bbox, got %+v", img)
+		}
+	}
+
+	chapter, err := doc.ExtractPageContent(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(chapter.Text) == 0 || !strings.Contains(chapter.Text[0].Text, "Chapter 1") {
+		t.Errorf("page 1: expected text blocks starting with Chapter 1, got %+v", chapter.Text)
+	}
+
+	_, err = doc.ExtractPageContent(doc.NumPage())
+	if !errors.Is(err, fitz.ErrPageMissing) {
+		t.Error(fmt.Errorf("ErrPageMissing not returned got %v", err))
+	}
+}
+
+func TestEmptyBytes(t *testing.T) {
+	var err error
+	// empty reader
+	_, err = fitz.NewFromReader(emptyReader{})
+	if !errors.Is(err, fitz.ErrEmptyBytes) {
+		t.Errorf("Expected ErrEmptyBytes, got %v", err)
+	}
+	// nil slice
+	_, err = fitz.NewFromMemory(nil)
+	if !errors.Is(err, fitz.ErrEmptyBytes) {
+		t.Errorf("Expected ErrEmptyBytes, got %v", err)
+	}
+	// empty slice
+	_, err = fitz.NewFromMemory(make([]byte, 0))
+	if !errors.Is(err, fitz.ErrEmptyBytes) {
+		t.Errorf("Expected ErrEmptyBytes, got %v", err)
+	}
+}
+
+type emptyReader struct{}
+
+func (emptyReader) Read([]byte) (int, error) { return 0, io.EOF }
+
+func TestConcurrent(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join("testdata", "test.pdf"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	const workers = 8
+	const iters = 20
+
+	var wg sync.WaitGroup
+	errs := make(chan error, workers*iters)
+
+	for w := 0; w < workers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < iters; i++ {
+				doc, err := fitz.NewFromMemory(b)
+				if err != nil {
+					errs <- err
+					return
+				}
+				if _, err := doc.ImageDPI(0, 200); err != nil {
+					doc.Close()
+					errs <- err
+					return
+				}
+				if _, err := doc.Text(0); err != nil {
+					doc.Close()
+					errs <- err
+					return
+				}
+				doc.Close()
+			}
+		}()
+	}
+
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		t.Error(err)
 	}
 }

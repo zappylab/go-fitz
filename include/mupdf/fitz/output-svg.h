@@ -17,8 +17,8 @@
 //
 // Alternative licensing terms are available from the licensor.
 // For commercial licensing, see <https://www.artifex.com/> or contact
-// Artifex Software, Inc., 1305 Grant Avenue - Suite 200, Novato,
-// CA 94945, U.S.A., +1(415)492-9861, for further information.
+// Artifex Software, Inc., 39 Mesa Street, Suite 108A, San Francisco,
+// CA 94129, USA, for further information.
 
 #ifndef MUPDF_FITZ_OUTPUT_SVG_H
 #define MUPDF_FITZ_OUTPUT_SVG_H
@@ -32,6 +32,21 @@ enum {
 	FZ_SVG_TEXT_AS_PATH = 0,
 	FZ_SVG_TEXT_AS_TEXT = 1,
 };
+
+typedef struct fz_svg_device_options fz_svg_device_options;
+
+struct fz_svg_device_options {
+	int text_format;
+	int reuse_images;
+	int resolution;
+	int *id;
+};
+
+void fz_init_svg_device_options(fz_context *ctx, fz_svg_device_options *opts);
+void fz_parse_svg_device_options(fz_context *ctx, fz_svg_device_options *opts, const char *args);
+void fz_apply_svg_device_options(fz_context *ctx, fz_svg_device_options *opts, fz_options *options);
+
+fz_device *fz_new_svg_device_with_options(fz_context *ctx, fz_output *out, float page_width, float page_height, fz_svg_device_options *opts);
 
 /**
 	Create a device that outputs (single page) SVG files to
@@ -56,6 +71,8 @@ fz_device *fz_new_svg_device(fz_context *ctx, fz_output *out, float page_width, 
 		visual appearance.
 
 	reuse_images: Share image resources using <symbol> definitions.
+
+	resolution: Resolution to use when rasterizing shadings (and such) to images.
 
 	id: ID parameter to keep generated IDs unique across SVG files.
 */

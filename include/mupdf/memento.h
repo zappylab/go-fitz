@@ -4,11 +4,13 @@
    This software is provided AS-IS with no warranty, either express or
    implied.
 
-   This software is distributed under license and may not be copied, modified
-   or distributed except as expressly authorized under the terms of that
-   license. Refer to licensing information at http://www.artifex.com
-   or contact Artifex Software, Inc.,  1305 Grant Avenue - Suite 200,
-   Novato, CA 94945, U.S.A., +1(415)492-9861, for further information.
+   This software is distributed under license and may not be copied,
+   modified or distributed except as expressly authorized under the terms
+   of the license contained in the file COPYING in this distribution.
+
+   Refer to licensing information at http://www.artifex.com or contact
+   Artifex Software, Inc.,  39 Mesa Street, Suite 108A, San Francisco,
+   CA 94129, USA, for further information.
 */
 
 /* Memento: A library to aid debugging of memory leaks/heap corruption.
@@ -271,6 +273,7 @@ int Memento_failAt(int);
 int Memento_failThisEvent(void);
 void Memento_listBlocks(void);
 void Memento_listNewBlocks(void);
+void Memento_listLargeBlocks(void);
 void Memento_listPhasedBlocks(void);
 size_t Memento_setMax(size_t);
 void Memento_stats(void);
@@ -378,6 +381,7 @@ void Memento_showHash(unsigned int hash);
 #define Memento_failThisEvent()            0
 #define Memento_listBlocks()               do {} while (0)
 #define Memento_listNewBlocks()            do {} while (0)
+#define Memento_listLargeBlocks()          do {} while (0)
 #define Memento_listPhasedBlocks()         do {} while (0)
 #define Memento_setMax(A)                  0
 #define Memento_stats()                    do {} while (0)

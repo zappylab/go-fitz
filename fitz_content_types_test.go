@@ -25,6 +25,13 @@ func TestContentTypeEPUB(t *testing.T) {
 	testContentType("application/epub+zip", epub, t)
 }
 
+//go:embed testdata/test.mobi
+var mobi []byte
+
+func TestContentTypeMOBI(t *testing.T) {
+	testContentType("application/x-mobipocket-ebook", mobi, t)
+}
+
 //go:embed testdata/test.cbz
 var cbz []byte
 
@@ -95,6 +102,13 @@ func TestContentTypePDF(t *testing.T) {
 	testContentType("application/pdf", pdf, t)
 }
 
+//go:embed testdata/test.psd
+var psd []byte
+
+func TestContentTypePSD(t *testing.T) {
+	testContentType("image/vnd.adobe.photoshop", psd, t)
+}
+
 //go:embed testdata/test.pfm
 var pfm []byte
 
@@ -116,6 +130,13 @@ func TestContentTypePPM(t *testing.T) {
 	testContentType("image/x-portable-pixmap", ppm, t)
 }
 
+//go:embed testdata/test.svg
+var svg []byte
+
+func TestContentTypeSVG(t *testing.T) {
+	testContentType("image/svg+xml", svg, t)
+}
+
 //go:embed testdata/test.tif
 var tif []byte
 
@@ -128,4 +149,25 @@ var xps []byte
 
 func TestContentTypeXPS(t *testing.T) {
 	testContentType("application/oxps", xps, t)
+}
+
+//go:embed testdata/test.docx
+var docx []byte
+
+func TestContentTypeDOCX(t *testing.T) {
+	testContentType("application/vnd.openxmlformats-officedocument.wordprocessingml.document", docx, t)
+}
+
+//go:embed testdata/test.xlsx
+var xlsx []byte
+
+func TestContentTypeXLSX(t *testing.T) {
+	testContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", xlsx, t)
+}
+
+//go:embed testdata/test.pptx
+var pptx []byte
+
+func TestContentTypePPTX(t *testing.T) {
+	testContentType("application/vnd.openxmlformats-officedocument.presentationml.presentation", pptx, t)
 }

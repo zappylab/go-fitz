@@ -1,4 +1,4 @@
-// Copyright (C) 2004-2021 Artifex Software, Inc.
+// Copyright (C) 2004-2025 Artifex Software, Inc.
 //
 // This file is part of MuPDF.
 //
@@ -17,8 +17,8 @@
 //
 // Alternative licensing terms are available from the licensor.
 // For commercial licensing, see <https://www.artifex.com/> or contact
-// Artifex Software, Inc., 1305 Grant Avenue - Suite 200, Novato,
-// CA 94945, U.S.A., +1(415)492-9861, for further information.
+// Artifex Software, Inc., 39 Mesa Street, Suite 108A, San Francisco,
+// CA 94129, USA, for further information.
 
 #ifndef MUPDF_FITZ_CRYPT_H
 #define MUPDF_FITZ_CRYPT_H
@@ -235,7 +235,7 @@ typedef struct
 #define FZ_AES_ENCRYPT 1
 
 /**
-	AES encryption intialisation. Fills in the supplied context
+	AES encryption initialization. Fills in the supplied context
 	and prepares for encryption using the given key.
 
 	Returns non-zero for error (key size other than 128/192/256).
@@ -245,7 +245,7 @@ typedef struct
 int fz_aes_setkey_enc(fz_aes *ctx, const unsigned char *key, int keysize);
 
 /**
-	AES decryption intialisation. Fills in the supplied context
+	AES decryption initialization. Fills in the supplied context
 	and prepares for decryption using the given key.
 
 	Returns non-zero for error (key size other than 128/192/256).

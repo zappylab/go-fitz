@@ -1,4 +1,4 @@
-// Copyright (C) 2004-2021 Artifex Software, Inc.
+// Copyright (C) 2004-2025 Artifex Software, Inc.
 //
 // This file is part of MuPDF.
 //
@@ -17,8 +17,8 @@
 //
 // Alternative licensing terms are available from the licensor.
 // For commercial licensing, see <https://www.artifex.com/> or contact
-// Artifex Software, Inc., 1305 Grant Avenue - Suite 200, Novato,
-// CA 94945, U.S.A., +1(415)492-9861, for further information.
+// Artifex Software, Inc., 39 Mesa Street, Suite 108A, San Francisco,
+// CA 94129, USA, for further information.
 
 #ifndef MUPDF_FITZ_COLOR_H
 #define MUPDF_FITZ_COLOR_H
@@ -60,6 +60,14 @@ enum
 	FZ_RI_ABSOLUTE_COLORIMETRIC,
 };
 
+/* We abuse the top bit of the rendering intent to hold details of
+ * whether we are in a softmask or not. This should not be used by
+ * non-internal code. */
+enum
+{
+	FZ_RI_IN_SOFTMASK = 0x80
+};
+
 typedef struct
 {
 	uint8_t ri;	/* rendering intent */
@@ -92,6 +100,13 @@ const char *fz_rendering_intent_name(int ri);
 	(largely) be determined by the number of colors actually used.
 */
 enum { FZ_MAX_COLORS = 32 };
+
+/**
+	The maximum number of images samples allowed in any given image.
+
+	This limit is checked when allocating images.
+*/
+enum { FZ_MAX_SAMPLES = 1 << 30 };
 
 enum fz_colorspace_type
 {
@@ -242,6 +257,7 @@ int fz_colorspace_is_rgb(fz_context *ctx, fz_colorspace *cs);
 int fz_colorspace_is_cmyk(fz_context *ctx, fz_colorspace *cs);
 int fz_colorspace_is_lab(fz_context *ctx, fz_colorspace *cs);
 int fz_colorspace_is_indexed(fz_context *ctx, fz_colorspace *cs);
+int fz_colorspace_is_icc(fz_context *ctx, fz_colorspace *cs);
 int fz_colorspace_is_device_n(fz_context *ctx, fz_colorspace *cs);
 int fz_colorspace_is_device(fz_context *ctx, fz_colorspace *cs);
 int fz_colorspace_is_device_gray(fz_context *ctx, fz_colorspace *cs);
@@ -249,10 +265,27 @@ int fz_colorspace_is_device_cmyk(fz_context *ctx, fz_colorspace *cs);
 int fz_colorspace_is_lab_icc(fz_context *ctx, fz_colorspace *cs);
 
 /**
+	Get checksum of underlying ICC profile.
+*/
+void fz_colorspace_digest(fz_context *ctx, fz_colorspace *cs, unsigned char digest[16]);
+
+/**
 	Check to see that a colorspace is appropriate to be used as
 	a blending space (i.e. only grey, rgb or cmyk).
 */
 int fz_is_valid_blend_colorspace(fz_context *ctx, fz_colorspace *cs);
+
+/**
+	Get the 'base' colorspace for a colorspace.
+
+	For indexed colorspaces, this is the colorspace the index
+	decodes into. For all other colorspaces, it is the colorspace
+	itself.
+
+	The returned colorspace is 'borrowed' (i.e. no additional
+	references are taken or dropped).
+*/
+fz_colorspace *fz_base_colorspace(fz_context *ctx, fz_colorspace *cs);
 
 /**
 	Retrieve global default colorspaces.

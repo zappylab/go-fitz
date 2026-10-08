@@ -1,3 +1,8 @@
 module github.com/greenwookez/go-fitz
 
-go 1.18
+go 1.24.0
+
+require (
+	github.com/ebitengine/purego v0.10.1
+	golang.org/x/sys v0.33.0
+)

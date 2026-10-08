@@ -1,4 +1,4 @@
-// Copyright (C) 2004-2021 Artifex Software, Inc.
+// Copyright (C) 2004-2025 Artifex Software, Inc.
 //
 // This file is part of MuPDF.
 //
@@ -17,8 +17,8 @@
 //
 // Alternative licensing terms are available from the licensor.
 // For commercial licensing, see <https://www.artifex.com/> or contact
-// Artifex Software, Inc., 1305 Grant Avenue - Suite 200, Novato,
-// CA 94945, U.S.A., +1(415)492-9861, for further information.
+// Artifex Software, Inc., 39 Mesa Street, Suite 108A, San Francisco,
+// CA 94129, USA, for further information.
 
 #ifndef MUPDF_FITZ_PATH_H
 #define MUPDF_FITZ_PATH_H
@@ -63,7 +63,7 @@ typedef struct
 	float miterlimit;
 	float dash_phase;
 	int dash_len;
-	float dash_list[32];
+	float dash_list[FZ_FLEXIBLE_ARRAY];
 } fz_stroke_state;
 
 typedef struct
@@ -152,28 +152,20 @@ int fz_packed_path_size(const fz_path *path);
 	be aligned by the caller to the same alignment as required for
 	a fz_path pointer.
 
-	max: The number of bytes available in the block.
-	If max < sizeof(fz_path) then an exception will
-	be thrown. If max >= the value returned by
-	fz_packed_path_size, then this call will never
-	fail, except in low memory situations with large
-	paths.
-
 	path: The path to pack.
 
 	Returns the number of bytes within the block used. Callers can
 	access the packed path data by casting the value of pack on
 	entry to be a fz_path *.
 
-	Throws exceptions on failure to allocate, or if
-	max < sizeof(fz_path).
+	Throws exceptions on failure to allocate.
 
 	Implementation details: Paths can be 'unpacked', 'flat', or
-	'open'. Standard paths, as created are 'unpacked'. Paths that
-	will pack into less than max bytes will be packed as 'flat',
-	unless they are too large (where large indicates that they
-	exceed some private implementation defined limits, currently
-	including having more than 256 coordinates or commands).
+	'open'. Standard paths, as created are 'unpacked'. Paths
+	will be packed as 'flat', unless they are too large
+	(where large indicates that they exceed some private
+	implementation defined limits, currently including having
+	more than 256 coordinates or commands).
 
 	Large paths are 'open' packed as a header into the given block,
 	plus pointers to other data blocks.
@@ -182,7 +174,7 @@ int fz_packed_path_size(const fz_path *path);
 	or 'flat' packed. Simply pack a path (if required), and then
 	forget about the details.
 */
-size_t fz_pack_path(fz_context *ctx, uint8_t *pack, size_t max, const fz_path *path);
+size_t fz_pack_path(fz_context *ctx, uint8_t *pack, const fz_path *path);
 
 /**
 	Clone the data for a path.
@@ -197,6 +189,11 @@ size_t fz_pack_path(fz_context *ctx, uint8_t *pack, size_t max, const fz_path *p
 	Throws exceptions on failure to allocate.
 */
 fz_path *fz_clone_path(fz_context *ctx, fz_path *path);
+
+/**
+	Find out if a path is completely empty.
+*/
+int fz_path_is_empty(fz_context *ctx, const fz_path *path);
 
 /**
 	Return the current point that a path has
@@ -402,6 +399,7 @@ fz_stroke_state *fz_new_stroke_state_with_dash_len(fz_context *ctx, int len);
 	this can cause race conditions.
 */
 fz_stroke_state *fz_keep_stroke_state(fz_context *ctx, const fz_stroke_state *stroke);
+int fz_stroke_state_eq(fz_context *ctx, const fz_stroke_state *a, const fz_stroke_state *b);
 
 /**
 	Drop a reference to a stroke state structure, destroying the
@@ -450,6 +448,43 @@ fz_stroke_state *fz_unshare_stroke_state_with_dash_len(fz_context *ctx, fz_strok
 	Exceptions may be thrown in the event of a failure to
 	allocate.
 */
-fz_stroke_state *fz_clone_stroke_state(fz_context *ctx, fz_stroke_state *stroke);
+fz_stroke_state *fz_clone_stroke_state(fz_context *ctx, const fz_stroke_state *stroke);
+
+fz_linecap fz_linecap_from_string(const char *s);
+const char *fz_string_from_linecap(fz_linecap cap);
+fz_linejoin fz_linejoin_from_string(const char *s);
+const char *fz_string_from_linejoin(fz_linejoin join);
+
+/**
+	Check whether a given path, under the given transform
+	is an axis-aligned rectangle.
+
+	We accept zero width or height rectangles, so
+	"move 100, 100; line 200, 100" would count as
+	a rectangle too.
+*/
+int fz_path_is_rect(fz_context *ctx, const fz_path *path, fz_matrix ctm);
+
+/**
+	Check whether a given path, under the given transform
+	is an axis-aligned rectangle.
+
+	We accept zero width or height rectangles, so
+	"move 100, 100; line 200, 100" would count as
+	a rectangle too.
+
+	bounds = NULL, or place to return the rectangle
+	bounds if the path is a rectangle.
+*/
+int fz_path_is_rect_with_bounds(fz_context *ctx, const fz_path *path, fz_matrix ctm, fz_rect *bounds);
+
+/**
+	Check whether a given path has all its segments closed.
+
+	This includes both explicit closepaths, and where segments are implicitly
+	closed by segments that end where they started.
+*/
+int fz_path_is_closed(fz_context *ctx, const fz_path *path);
+
 
 #endif
