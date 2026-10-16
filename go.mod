@@ -1,4 +1,4 @@
-module github.com/greenwookez/go-fitz
+module github.com/zappylab/go-fitz
 
 go 1.24.0
 

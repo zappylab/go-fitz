@@ -13,7 +13,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/greenwookez/go-fitz"
+	"github.com/zappylab/go-fitz"
 )
 
 func TestImage(t *testing.T) {

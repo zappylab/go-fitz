@@ -31,7 +31,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/greenwookez/go-fitz"
+	"github.com/zappylab/go-fitz"
 )
 
 func main() {
